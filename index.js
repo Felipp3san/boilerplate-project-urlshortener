@@ -39,7 +39,7 @@ app.post('/api/shorturl', (req, res) => {
 		host = new URL(url);
 	}
 	catch (err) {
-		res.json({ error: 'Invalid URL'});	
+		res.json({ error: 'invalid url'});	
 	}
 
 	dns.lookup(host.hostname, async (err, addr) => {
@@ -52,7 +52,6 @@ app.post('/api/shorturl', (req, res) => {
 			short_url: highestShortUrl + 1
 		});
 
-		console.log(address);
 		address.save()
 			.then((doc) => {
 				res.json({ original_url: doc.url, short_url: doc.short_url });	
