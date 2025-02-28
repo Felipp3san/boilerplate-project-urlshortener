@@ -12,7 +12,6 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
-
 app.use('/public', express.static(`${process.cwd()}/public`));
 
 app.get('/', function(req, res) {
@@ -27,28 +26,18 @@ app.get('/api/hello', function(req, res) {
 app.get('/api/shorturl/:url', (req, res) => {
 	Host.findOne({ short_url: req.params.url })
 		.then((doc) => res.redirect(doc.url))
-		.catch((err) => res.json({"error":"No short URL found for the given input"}));
+		.catch((err) => res.json({ error: "No short URL found for the given input"}));
 })
 
 app.post('/api/shorturl', async (req, res) => {
 
 	const { url } = req.body;
-	let hostname = "";
 
 	try {
-		isValidUrl(url);
-		hostname = new URL(url).hostname;
+		await isValidUrl(url);
 	}
 	catch (err) {
-		return res.json({ error: 'Invalid URL'});	
-	}
-
-	try {
-		await dns.lookup(hostname);
-	}
-	catch (err) {
-		console.log(err);
-		return res.json({ error: 'Invalid Hostname'});
+		return res.json({ error: err.message });	
 	}
 
 	try {
@@ -61,11 +50,29 @@ app.post('/api/shorturl', async (req, res) => {
 	}
 })
 
-function isValidUrl(url) {
+async function isValidUrl(url) {
+
+	let hostname = "";
 	let regex = /^(http\:\/\/|https\:\/\/)/;
 
 	if (!regex.test(url))
-		throw err;
+		throw new Error("Invalid URL");
+
+	try {
+		hostname = new URL(url).hostname;
+	}
+	catch (err) {
+		throw new Error("Invalid URL");
+	}
+
+	try {
+		await dns.lookup(hostname);
+	}
+	catch (err) {
+		throw new Error("Invalid Hostname");
+	}
+
+	return true;
 }
 
 async function insertHost(url) {
