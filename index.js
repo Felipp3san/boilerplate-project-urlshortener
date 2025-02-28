@@ -4,7 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const app = express();
 const db = require('./database.js');
-const dns = require('node:dns');
+const dns = require('dns').promises;
 const Host = require('./models/host.js');
 
 // Basic Configuration
@@ -30,35 +30,52 @@ app.get('/api/shorturl/:url', (req, res) => {
 		.catch((err) => res.json({"error":"No short URL found for the given input"}));
 })
 
-app.post('/api/shorturl', (req, res) => {
+app.post('/api/shorturl', async (req, res) => {
 
 	const { url } = req.body;
-	let host;
+	let hostname = "";
 
 	try {
-		host = new URL(url);
+		hostname = new URL(url).hostname;
 	}
 	catch (err) {
 		return res.json({ error: 'Invalid URL'});	
 	}
 
-	dns.lookup(host.hostname, async (err, addr) => {
-		if (err) return res.json({ error: 'Invalid Hostname'});
+	try {
+		await dns.lookup(hostname);
+	}
+	catch (err) {
+		console.log(err);
+		return res.json({ error: 'Invalid Hostname'});
+	}
 
-		let highestShortUrl = await getHighestShortUrl();
+	try {
+		const doc = await insertHost(url);
+		res.json({ original_url: doc.url, short_url: doc.short_url });
+	}
+	catch (err) {
+		console.log(err);
+		res.json({ error: 'Failed to store URL in DB'});
+	}
+})
 
-		let address = new Host({
+async function insertHost(url) {
+	try {
+		let doc = await Host.findOne({ url: url }).exec();	
+		if(doc) return doc;
+
+		let newDoc = new Host({
 			url: url,	
-			short_url: highestShortUrl + 1
+			short_url: await getHighestShortUrl() + 1
 		});
 
-		address.save()
-			.then((doc) => {
-				res.json({ original_url: doc.url, short_url: doc.short_url });	
-			})
-			.catch((err) => res.json({ error: err }));
-	});
-})
+		return await newDoc.save();
+	}
+	catch (err) {
+		throw err;
+	}
+}
 
 async function getHighestShortUrl() {
     try {
