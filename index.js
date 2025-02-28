@@ -36,6 +36,7 @@ app.post('/api/shorturl', async (req, res) => {
 	let hostname = "";
 
 	try {
+		isValidUrl(url);
 		hostname = new URL(url).hostname;
 	}
 	catch (err) {
@@ -59,6 +60,13 @@ app.post('/api/shorturl', async (req, res) => {
 		res.json({ error: 'Failed to store URL in DB'});
 	}
 })
+
+function isValidUrl(url) {
+	let regex = /^(http\:\/\/|https\:\/\/)/;
+
+	if (!regex.test(url))
+		throw err;
+}
 
 async function insertHost(url) {
 	try {
