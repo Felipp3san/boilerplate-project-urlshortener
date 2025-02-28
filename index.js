@@ -27,7 +27,7 @@ app.get('/api/hello', function(req, res) {
 app.get('/api/shorturl/:url', (req, res) => {
 	Host.findOne({ short_url: req.params.url })
 		.then((doc) => res.redirect(doc.url))
-		.catch((err) => res.send("Not found"));
+		.catch((err) => res.json({"error":"No short URL found for the given input"}));
 })
 
 app.post('/api/shorturl', (req, res) => {
